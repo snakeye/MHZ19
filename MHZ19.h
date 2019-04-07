@@ -17,30 +17,43 @@
 
 #include <Arduino.h>
 
-class MHZ19 {
-  static const int PREHEAT_TIME = 180000; // 3 mins
+class MHZ19
+{
+  static const int PREHEAT_TIME = 15000; // 3 mins
 
-  private:
-    bool sensorIsReady;
-    Stream *_streamRef;
-    static byte CMD_READ[];
-    static byte CMD_CALIBRATE_ZERO[];
-    static byte CMD_ABC_ON[];
-    static byte CMD_ABC_OFF[];
-    static byte getCheckSum(byte *packet);
+public:
+  enum ErrorCode
+  {
+    OK,
+    E_SERIAL_NOT_READY,
+    E_INVALID_RESPONSE,
+    E_INVALID_CRC,
+  };
 
-    bool sendCmd(byte*);
+public:
+  void setSerial(Stream *streamRef);
+  bool setRange(int);
 
-  public:
-    void setSerial(Stream *streamRef);
-    bool setRange(int);
+  bool isReady();
+  ErrorCode readValue(int *co2, int *temp = NULL, int *status = NULL);
 
-    bool enableABC();
-    bool disableABC();
-    bool calibrateZero();
-    bool calibrateSpan(int);
-    int readValue();
-    bool isReady();
+  bool enableABC();
+  bool disableABC();
+  bool calibrateZero();
+  bool calibrateSpan(int);
+
+private:
+  static byte getCheckSum(byte *packet);
+
+  bool sendCmd(byte *);
+
+private:
+  bool sensorIsReady;
+  Stream *_streamRef;
+  static byte CMD_READ[];
+  static byte CMD_CALIBRATE_ZERO[];
+  static byte CMD_ABC_ON[];
+  static byte CMD_ABC_OFF[];
 };
 
 #endif // MHZ19_H

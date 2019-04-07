@@ -18,9 +18,11 @@
  * Checks a crc of an 9 bype packet
  */
 
-byte MHZ19::getCheckSum(byte* packet) {
+byte MHZ19::getCheckSum(byte *packet)
+{
   byte checksum = 0;
-  for(uint8_t i = 1; i < 8; i++) {
+  for (uint8_t i = 1; i < 8; i++)
+  {
     checksum += packet[i];
   }
   checksum = 0xff - checksum;
@@ -28,10 +30,10 @@ byte MHZ19::getCheckSum(byte* packet) {
   return checksum;
 }
 
-byte MHZ19::CMD_READ[9] = {0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79}; // Read command
-byte MHZ19::CMD_CALIBRATE_ZERO[9] = {0xFF, 0x01, 0x87, 0x00, 0x00,0x00, 0x00, 0x00, 0x78}; // Calibrate ZERO point
-byte MHZ19::CMD_ABC_ON[9] = {0xFF, 0x01, 0x79, 0xA0, 0x00, 0x00, 0x00, 0x00, 0xE6}; // Enables Automatic Baseline Correction
-byte MHZ19::CMD_ABC_OFF[9] = {0xFF, 0x01, 0x79, 0x00, 0x00, 0x00, 0x00, 0x00, 0x86}; // Disables Automatic Baseline Correction
+byte MHZ19::CMD_READ[9] = {0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00, 0x79};           // Read command
+byte MHZ19::CMD_CALIBRATE_ZERO[9] = {0xFF, 0x01, 0x87, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78}; // Calibrate ZERO point
+byte MHZ19::CMD_ABC_ON[9] = {0xFF, 0x01, 0x79, 0xA0, 0x00, 0x00, 0x00, 0x00, 0xE6};         // Enables Automatic Baseline Correction
+byte MHZ19::CMD_ABC_OFF[9] = {0xFF, 0x01, 0x79, 0x00, 0x00, 0x00, 0x00, 0x00, 0x86};        // Disables Automatic Baseline Correction
 
 /*
  * Sends command to MH-Z19 with back crc checking
@@ -39,7 +41,8 @@ byte MHZ19::CMD_ABC_OFF[9] = {0xFF, 0x01, 0x79, 0x00, 0x00, 0x00, 0x00, 0x00, 0x
  * @return bool indicating command receive
  */
 
-bool MHZ19::sendCmd(byte cmd[9]) {
+bool MHZ19::sendCmd(byte cmd[9])
+{
   unsigned char response[9];
 
   _streamRef->write(cmd, 9);
@@ -47,7 +50,8 @@ bool MHZ19::sendCmd(byte cmd[9]) {
 
   byte crc = getCheckSum(response);
 
-  if (response[0] == 0xFF && response[1] == cmd[2] && response[8] == crc) {
+  if (response[0] == 0xFF && response[1] == cmd[2] && response[8] == crc)
+  {
     return true;
   }
 
@@ -58,7 +62,8 @@ bool MHZ19::sendCmd(byte cmd[9]) {
  * @param Stream instance reference. Usually HardwareSerial or SoftwareSerial
  */
 
-void MHZ19::setSerial(Stream *streamRef) {
+void MHZ19::setSerial(Stream *streamRef)
+{
   _streamRef = streamRef;
 };
 
@@ -69,8 +74,10 @@ void MHZ19::setSerial(Stream *streamRef) {
  * NOTE: Datasheet recomends usage of 0-2000ppm and 0-5000ppm detection ranges.
  */
 
-bool MHZ19::setRange(int range) {
-  if (!(range >= 1000 && range <= 5000)) {
+bool MHZ19::setRange(int range)
+{
+  if (!(range >= 1000 && range <= 5000))
+  {
     return false;
   }
 
@@ -86,7 +93,8 @@ bool MHZ19::setRange(int range) {
  * Enables sensor Automatic Baseline Correction (ABC)
  */
 
-bool MHZ19::enableABC() {
+bool MHZ19::enableABC()
+{
   return sendCmd(CMD_ABC_ON);
 }
 
@@ -94,7 +102,8 @@ bool MHZ19::enableABC() {
  * Disables sensor Automatic Baseline Correction (ABC)
  */
 
-bool MHZ19::disableABC() {
+bool MHZ19::disableABC()
+{
   return sendCmd(CMD_ABC_OFF);
 }
 
@@ -102,7 +111,8 @@ bool MHZ19::disableABC() {
  * Calibrates sensor's zero point assuming that current value is 400ppm
  */
 
-bool MHZ19::calibrateZero() {
+bool MHZ19::calibrateZero()
+{
   return sendCmd(CMD_CALIBRATE_ZERO);
 }
 
@@ -110,8 +120,10 @@ bool MHZ19::calibrateZero() {
  * Calibrates sensor's span point (have no idea what it is)
  */
 
-bool MHZ19::calibrateSpan(int span) {
-  if (!(span >= 1000 && span <= 5000)) {
+bool MHZ19::calibrateSpan(int span)
+{
+  if (!(span >= 1000 && span <= 5000))
+  {
     return false;
   }
 
@@ -127,25 +139,41 @@ bool MHZ19::calibrateSpan(int span) {
  * Read current ppm from sensor
  */
 
-int MHZ19::readValue() {
-  unsigned int co2 = -1;
-  unsigned char response[9];
+MHZ19::ErrorCode MHZ19::readValue(int *co2, int *temp, int *status)
+{
+  unsigned char response[9] = {0};
+
   _streamRef->write(CMD_READ, 9);
 
-  if (_streamRef->available()) {
-    _streamRef->readBytes(response, 9);
+  if (!_streamRef->available())
+    return E_SERIAL_NOT_READY;
 
-    byte crc = getCheckSum(response);
+  _streamRef->readBytes(response, 9);
 
-    if (response[0] == 0xFF && response[1] == CMD_READ[2] && response[8] == crc) {
-      unsigned int responseHigh = (unsigned int) response[2];
-      unsigned int responseLow = (unsigned int) response[3];
-      unsigned int ppm = (256*responseHigh) + responseLow;
-      co2 = ppm;
-    }
+  byte crc = getCheckSum(response);
+
+  if (response[0] != 0xFF || response[1] != CMD_READ[2])
+    return E_INVALID_RESPONSE;
+
+  if (response[8] != crc)
+    return E_INVALID_CRC;
+
+  unsigned int responseHigh = (unsigned int)response[2];
+  unsigned int responseLow = (unsigned int)response[3];
+
+  *co2 = (256 * responseHigh) + responseLow;
+
+  if (temp != NULL)
+  {
+    *temp = response[4];
   }
 
-  return co2;
+  if (status != NULL)
+  {
+    *status = response[5];
+  }
+
+  return OK;
 }
 
 /*
@@ -153,9 +181,12 @@ int MHZ19::readValue() {
  * According to datasheet MH-Z19 preheat time is 3 mins.
  */
 
-bool MHZ19::isReady() {
-  if (!sensorIsReady) {
-    if (millis() > PREHEAT_TIME) {
+bool MHZ19::isReady()
+{
+  if (!sensorIsReady)
+  {
+    if (millis() > PREHEAT_TIME)
+    {
       sensorIsReady = true;
       return sensorIsReady;
     }
