@@ -148,16 +148,34 @@ MHZ19::ErrorCode MHZ19::readValue(int *co2, int *temp, int *status)
   if (!_streamRef->available())
     return E_SERIAL_NOT_READY;
 
-  _streamRef->readBytes(response, 9);
+  // skip incorrect values in the stream
+  while (_streamRef->available() && (unsigned char)_streamRef->peek() != 0xff)
+  {
+    Serial.print('Skipping ');
+    Serial.println(_streamRef->peek(), HEX);
 
-  byte crc = getCheckSum(response);
+    _streamRef->read();
+  }
 
+  //
+  int count = _streamRef->readBytes(response, 9);
+  if (count < 9) {
+    _streamRef->flush();
+    return E_INCOMPLETE;
+  }
+
+  _streamRef->flush();
+
+  //
   if (response[0] != 0xFF || response[1] != CMD_READ[2])
     return E_INVALID_RESPONSE;
 
+  //
+  byte crc = getCheckSum(response);
   if (response[8] != crc)
     return E_INVALID_CRC;
 
+  //
   unsigned int responseHigh = (unsigned int)response[2];
   unsigned int responseLow = (unsigned int)response[3];
 

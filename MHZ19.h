@@ -26,6 +26,7 @@ public:
   {
     OK,
     E_SERIAL_NOT_READY,
+    E_INCOMPLETE,
     E_INVALID_RESPONSE,
     E_INVALID_CRC,
   };
